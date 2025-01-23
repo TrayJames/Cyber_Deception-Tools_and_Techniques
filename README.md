@@ -1,127 +1,121 @@
 # Cyber_Deception-Tools_and_Techniques
 
-# SOAR-Automation-Project
-## Introduction
+## Disclaimer!
 
-With advancements in technology security professionals now have the ability to detect and automate responses to certain events/alerts via a SOAR (Security Orchestration Automation and Response). This Project demonstrates setting up this process utilizing free and open-source technologies; Wazuh, TheHive, and Shuffle (the SOAR platform)
-
-
-<!---![alt text](https://github.com/TrayJames/SOAR-Automation-Project/blob/main/assets/1SOC_Automation.png?raw=true) --->
-
-*Diagram of SOC Automation Dataflow*
-![EEG Band Discovery](/assets/1SOC_Automation.png)
+**<span style="color:red"> All lab materials and content performed in this lab are provided by CMU and its Students, specifically CMU's Applied Information Assurance (AIA) course taught at the INI. I give all credit to the INI AIA students and CMU for the environment, content, and setup of this lab, such was not done by my own hands.</span>**
 
 ## Starting Point/Setup
-As a starting point for this project I have already:
 
-1. Created a new Windows 10 VM using Virtual Box and installed Sysmon.
-2. Created two Ubuntu 22.04 servers in the cloud via Digital Ocean. One for Wazuh and the other for TheHive
-3. Created Firewall Inbound rules to only allow TCP, UDP and ICMP(ping) packets from my home machine public IP
-4. Configured both Wazuh and TheHive and got both services started.
-5. Connected the Windows 10 VM to Wazuh as an agent.
-6. Installed mimikatz on the Windows 10 VM as an example of malicious software being installed.
+This lab topology involves a compromised server that is connected to 2 decoy machines (DM1 and DM2) and 1 monitoring machine.
+- The compromised server is running Kali Linux
+- Both Decoy Servers are running Ubuntu
+- The Monitoring Server is running Ubuntu with ELK Stack
 
-The following screenshots detail the steps that occurred after this setup:
+The present scenario involves an attacker breaching a hypothetical organization, compromising one of its machines, and seeking to propagate to other machines on the network. However, the current organization already has security measures in place to thwart such attempts and deceive the attacker. The following walkthrough details various cyber deception tools and techniques that an organization can use to defend against cyber attacks.
 
-## Event Trigger and Rule Setup
+## Deception Part 1
 
-*Sysmon Logged mimikatz execution*
-![EEG Band Discovery](/assets/SysmonDetectedMimikatzInstall.png)
+*Started Filebeat on both decoy devices to begin recording and sending logs to the monitoring system*
 
-*Wazuh received log from Sysmon about mimikatz execution*
-![EEG Band Discovery](/assets/MitreWazuhDetection.png)
-
-*Created new custom rule for sysmon events having an ID of 1. Rule looks for mimikatz.exe originalFileName with a MITRE id of T1003, indicating Credential dumping* 
-![EEG Band Discovery](/assets/CreatingWazuhCustomRules.png)
-
-*Renamed mimikatz.exe to this_a_safe_program.exe and ran it. Despite this, Wazuh still captured and flaged the event in accordance to the newly created rule. This is because it is looking at the original filename instead of the image name* 
-![EEG Band Discovery](/assets/NewRuleMimikatzCapture.png)
-
-## Orchestration and Notification Setup
-*Edited Wazuh Configuration to forward json when the rule for the mimikatz event I created is triggered this will be captured by the webhook in shuffle* 
-![EEG Band Discovery](/assets/WazuhAutomationConfiguration.png)
-
-*Start of Shuffle workflow. Created a webhook that will capture Wazuhs alert in shuffle*
-![EEG Band Discovery](/assets/ShuffleWebhook.png)
-
-*Webhook successfully captured Wazuhs alert in Shuffle. Within Wazhuhs alert is a hash of mimikatz. Bellow is regex used to parse this SHA256 hash from the alert*
-![EEG Band Discovery](/assets/ParsedHashWithRegex.png)
-
-*After SHA256 hash is extracted, a VirusTotal app is connected to the workflow. Authenticating using a virus total API key the workflow now forwards the parsed-out hash from the Wazuh response to Virustotal to be evaluated*
-![EEG Band Discovery](/assets/AddVirusTotalToWorkflow.png)
-
-*The Response virus total returned from the hashed value we sent to it via its API. As you can see the hash evaluates to mimikatz*
-![EEG Band Discovery](/assets/ShuffleVirusTotalOutput.png)
-
-*Setting up the TheHive Incident Response workflow: A request is created in Shuffle that will be sent to the Hive to create an alert using a Hive API Key. The below shows this request was successfully received by TheHive and a new alert is created*
-  ![EEG Band Discovery](/assets/SetupHiveWorkflowAlertCreatedSuccessfully.png)
-
-*The generated alert as it is shown in TheHive alert Summary*
-  ![EEG Band Discovery](/assets/TheHiveAlertSummary.png)
-
-*Adding Email functionality in the workflow. After we create an alert in TheHive we will send an email to the SOC analyst about the alert *
-  ![EEG Band Discovery](/assets/WorkFlowEmailSentSetup.png)
-
-*Email about the alert is successfully sent to and received by The SOC Analyst*
-  ![EEG Band Discovery](/assets/EmailSuccessfullySentAndReceived.png)
-
-## Active Response Setup
-
-Bellow details setting up Wazuh Active response in which a SOC analyst will be provided options as to how they can respond to an SSH brute force is detected. This time the above workflow is using a Ubuntu VM instead of a Windows VM. To be clear the automation workflow will follow a similar pattern as above: 
-
-1. An SSH brute force will occur on our Ubuntu VM.
-2. Wazuh will send an alert to Shuffle.
-3. Shuffle will parse out the IP address within the alert response
-4. The IP address will be submitted to VirusTotal, and be analyzed to see if it is malicious
-5. The SOC analyst will receive a report about the event and will be prompted with response options.
-6. Based on what the SOC analyst's response is an action will be performed by Wazuh
-7. Using Wazuhs API the IP will be blocked
-
-The starting point for the Active Response Setup will start by configuring action rules in Wazuh:
-
-*Setting up action-response in Wazuh; The action-response 'firewall-drop0' will block an IP we specify for a particular agent or list of agents *
-  ![EEG Band Discovery](/assets/WazuhActiveResponseSetup.png)
-
-*An attempt to brute force SSH was discovered by Wazuh*
-  ![EEG Band Discovery](/assets/SSHBruteForce.png)
+![EEG Band Discovery](/assets/FileBeatStart.png)
 
 
-*Alert is sent to Shuffle by Wazuh and is received successfully*
-  ![EEG Band Discovery](/assets/ShuffleCaptureSSHBruteForce.png)
-  
+*Started Port Spoofer on Decoy 2 to create fake ports*
 
-*Add a new HTTP app to the workflow to Authenticate to the Wazuh API. This API is what will be used when we want to cause an active response in Wazuh*
-  ![EEG Band Discovery](/assets/AuthenticateWazuhAPI.png)
+![EEG Band Discovery](/assets/PortSpoofingStart.png)
 
 
-*IP from the alert Wazuh sent is passed to virus total via its API. Bellow is Virustotals response*
-  ![EEG Band Discovery](/assets/VirusTotalIPAnalysis.png)
+*As the attacker, I ran an Nmap scan to see what other devices were available to move to. The below shows available machines aswell as generated fake ports by Portsspoofer (although the attacker does not now)*
+
+![EEG Band Discovery](/assets/AttackerSpoofedNmapScan.png)
 
 
-*Setup and execution of User input trigger: Given this response from VirusTotal a user input trigger is executed. This will send an email asking the user if they would like to block the IP*
-  ![EEG Band Discovery](/assets/UserInputConfiguration.png)
+*Conducted an nmap probe scan to understand more about the machine shown in the above image. (As an attacker digs deeper into each port they will realize that results are different from the initial scan aswell as other identifiers that hint to this machine being difficult to exploit)*
+
+![EEG Band Discovery](/assets/NmapProbeSV.png)
 
 
-  *Setup of Wazuh Action Response API endpoint: After receiving the SOC analyst's response this will either block the ip address or not block it*
-  ![EEG Band Discovery](/assets/WazuhConfiguration.png)
+*While this is occurring, on the Monitor side, a Security analyst will receive an alert indicating a port scanning attack and can take the necessary security procedures to isolate the machine and address the security breach*
 
-  
+![EEG Band Discovery](/assets/PortScanAttackLogs.png)
 
-*Email successfully received from Shuffle, requesting to block the IP. In this case, the SOC analyst decides to block the IP*
-  ![EEG Band Discovery](/assets/BlockIPEmailReceived.png)
+## Deception Part 2
 
+*Started Cowerie, an SSH honeypot, on Decoy 2*
 
-*Result of SOC analyst blocking the IP, here we can see in the active response log that the IP was blocked via active-response firewall-drop0*
-  ![EEG Band Discovery](/assets/ActiveResponseLog.png)
+![EEG Band Discovery](/assets/CowrieSetup.png)
 
 
-*Verification that the IP address was blocked: Below we can see that the IP address has been blocked in IP tables and we can no longer receive packets from it.*
-  ![EEG Band Discovery](/assets/IPSuccessfullyBlocked.png)
 
-  
-*Complete automation workflow*
-  ![EEG Band Discovery](/assets/TotalWorkflow.png)
+*As the attacker, Ive realized that the ports in the previous machines may have been spoofed and decide to run another port scan to find another machine. As shown below the new machine has an SSH server as the attacker I attempt to ssh into the server*
+![EEG Band Discovery](/assets/SuspectedSpoofAttackerNewScan.png)
 
-  ## Summary
-  Within this project, I illustrated how to create an automation workflow using Wazuh, Shuffle, and TheHive. A major insight I took away from this project, is while Automation is very powerful and useful for security practitioners, in this format, it is also very fragile. If one of the API endpoints that we use in the automation pipeline changes the whole automation comes down. A better method would be to utilize AI to not only build but also maintain automations and will adapt automatically to when such changes are performed. I plan to implement this in future projects.
+
+*Frustrated with attempting different passwords, I as the attacker decide to run a brute force script of common SSH passwords to try and get into the machine. It looks like I found a successful password.*
+
+![EEG Band Discovery](/assets/BruteForcePasswordScript.png)
+
+
+*The attacker tries the password and can finally SSH into the server*
+
+![EEG Band Discovery](/assets/BruteForcePasswordSuccessful.png)
+
+
+
+*Exploring the new server I discover a secret file containing an email server admin portal endpoint*
+
+![EEG Band Discovery](/assets/AttackerFoundSecretFile.png)
+
+
+*While the attacker believes they have found something useful, little do they know that they have already alerted Security personnel. On the Monitoring side, a Security analyst will receive an alert indicating an SSH bruteforce attack and can take the necessary security procedures to isolate the machine and address the security breach*
+
+![EEG Band Discovery](/assets/CowrieSSHAttackLogs.png)
+
+## Deception 3
+
+
+*Started SpringBoot a JAVA based API*
+
+![EEG Band Discovery](/assets/StartSpringBoot.png)
+
+
+
+*Started Django web framework*
+
+![EEG Band Discovery](/assets/StartDjangoHoneyPot.png)
+
+
+
+*Carrying on from the previous section, I as the attacker decide to investigate further into the URL I found, and test to see if it actually works.The curl command proves the email server is legit*
+
+![EEG Band Discovery](/assets/TestEmailServer.png)
+
+
+*It appears that the endpoint is available and accessible, however, the attacker needs a password to log in, I try a few passwords to no avail*
+
+![EEG Band Discovery](/assets/EmailEndpoint.png)
+
+
+*While the attacker is doing this on the Monitoring side, a Security analyst will receive an alert indicating an unauthorized email entry login to the dummy email server. At this point they can take the necessary security procedures to isolate the machine and address the security breach. But, lets continue on to see what the attacker does*
+
+![EEG Band Discovery](/assets/UnauthorizedEmailEntryLog.png)
+
+## Deception 4
+
+*Spidertrap started on decoy machine 2 to create a set of fake web pages*
+![EEG Band Discovery](/assets/StartSpiderTrap.png)
+
+
+*Unsuccessful with login in attempts to the email/login endpoint. I as the attacker attempt to use gobuster, a brute-force directory enumeration tool to find different endpoints on the email server. However, as shown below there seems to be a bunch of strange paths, it seems that Gobuster is not providing authentic results*
+
+![EEG Band Discovery](/assets/GobusterFailure.png)
+
+
+*On the Monitoring side, a Security analyst will receive an alert from the attacker doing this that indicates a directory enumeration attack and can take the necessary security procedures to isolate the machine and address the security breach*
+
+![EEG Band Discovery](/assets/DirectoryEnumerationLogs.png)
+
+
+## Summary
+Within this Lab, I illustrated the use of various deception techniques and tools (e.g. Cowrie, Spidertrap, and Portspoofer) that can be used as a means to delay attackers and give Security professionals time to discover and analyze security breaches/alerts. There are many other tools and techniques that can be implemented depending on an organization's functions and internal architecture. Hopefully, this lab can provide examples to others of means by which they can implement similar cyber deception tools and techniques in their own cyber environment.
   
